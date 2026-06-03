@@ -4,6 +4,11 @@ services:
     runtime: static
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://scms-server-multitenacy.onrender.com/api/v1
+      - key: VITE_SERVER_URL
+        value: https://scms-server-multitenacy.onrender.com
     routes:
       - type: rewrite
         source: /*

@@ -20,8 +20,13 @@ export const SocketProvider = ({ children }) => {
   }, [user, isAuthenticated]);
 
   useEffect(() => {
-    const socketUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
-    
+    const socketUrl = import.meta.env.VITE_SERVER_URL;
+
+    if (!socketUrl) {
+      console.error('VITE_SERVER_URL is not defined in environment variables');
+      return;
+    }
+
     console.log('Connecting to Socket.io at:', socketUrl);
 
     const newSocket = io(socketUrl, {
@@ -35,7 +40,7 @@ export const SocketProvider = ({ children }) => {
 
     newSocket.on('connect', () => {
       console.log('Connected to WebSocket server');
-      
+
       // Use ref values to avoid stale closure
       if (authRef.current && userRef.current?.id) {
         newSocket.emit('join', userRef.current.id);
