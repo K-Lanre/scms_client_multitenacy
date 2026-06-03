@@ -38,11 +38,14 @@ const Register = () => {
 
       await signupMutation.mutateAsync(payload);
       toast.success(
-        "Account created successfully! Please complete your onboarding.",
+        "Account created successfully! Please verify your email.",
       );
-      navigate("/dashboard");
+      navigate("/verify-email");
     } catch (err) {
       console.error("Registration failed:", err);
+      toast.error(
+        err.response?.data?.message || "Registration failed. Please try again.",
+      );
     }
   };
 
@@ -72,9 +75,8 @@ const Register = () => {
                 type="text"
                 placeholder="Search your cooperative name..."
                 autoComplete="off"
-                className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${
-                  errors.institutionCode ? "border-red-500 bg-red-50" : "border-gray-300"
-                }`}
+                className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.institutionCode ? "border-red-500 bg-red-50" : "border-gray-300"
+                  }`}
                 onChange={async (e) => {
                   const val = e.target.value;
                   setSearchTerm(val);
@@ -92,11 +94,11 @@ const Register = () => {
                 }}
                 value={searchTerm}
               />
-              
+
               {/* Hidden input for react-hook-form */}
-              <input 
-                type="hidden" 
-                {...register("institutionCode", { required: "Please select an institution from the list" })} 
+              <input
+                type="hidden"
+                {...register("institutionCode", { required: "Please select an institution from the list" })}
               />
 
               {/* Suggestions Dropdown */}

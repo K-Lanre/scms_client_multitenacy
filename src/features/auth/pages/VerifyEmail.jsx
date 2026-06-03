@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FiMail,
   FiCheckCircle,
@@ -12,11 +12,31 @@ import {
 } from "../hooks/useAuth";
 import toast from "react-hot-toast";
 
+const RESEND_COOLDOWN_SECONDS = 60; // 60 seconds cooldown
+
 const VerifyEmail = () => {
   const { user } = useAuth();
   const verifyEmail = useVerifyEmail();
   const resendVerification = useResendVerification();
   const [token, setToken] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+
+  // Cooldown timer effect
+  useEffect(() => {
+    let timer;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -27,9 +47,17 @@ const VerifyEmail = () => {
     verifyEmail.mutate(token);
   };
 
-  const handleResend = () => {
-    resendVerification.mutate();
-  };
+  const handleResend = useCallback(() => {
+    if (cooldown > 0) {
+      toast.error(`Please wait ${cooldown} seconds before resending`);
+      return;
+    }
+    resendVerification.mutate(undefined, {
+      onSuccess: () => {
+        setCooldown(RESEND_COOLDOWN_SECONDS);
+      },
+    });
+  }, [cooldown, resendVerification]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -87,12 +115,28 @@ const VerifyEmail = () => {
             <button
               type="button"
               onClick={handleResend}
-              disabled={resendVerification.isPending}
-              className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center disabled:opacity-50"
+              disabled={resendVerification.isPending || cooldown > 0}
+              className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {resendVerification.isPending ? "Sending..." : "Click to resend"}
-              <FiArrowRight className="ml-1" />
+              {resendVerification.isPending ? (
+                <>
+                  <FiRefreshCw className="animate-spin mr-1" />
+                  Sending...
+                </>
+              ) : cooldown > 0 ? (
+                `Resend in ${cooldown}s`
+              ) : (
+                <>
+                  Click to resend
+                  <FiArrowRight className="ml-1" />
+                </>
+              )}
             </button>
+            {cooldown > 0 && (
+              <p className="text-xs text-gray-400 mt-2">
+                You can request a new code in {cooldown} seconds
+              </p>
+            )}
           </div>
         </div>
 
