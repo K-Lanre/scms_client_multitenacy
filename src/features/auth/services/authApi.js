@@ -63,6 +63,11 @@ export const resendVerification = async () => {
     return data;
 };
 
+export const cancelSignup = async () => {
+    const { data } = await api.post('/auth/cancel-signup');
+    return data;
+};
+
 export const updateProfile = async (formData) => {
     const { data } = await api.patch('/auth/update-profile', formData);
     return data.data.user;

@@ -11,8 +11,11 @@ import {
   useAuth,
   useVerifyEmail,
   useResendVerification,
+  useCancelSignup,
 } from "../hooks/useAuth";
+import { useConfirm } from "../../../contexts/ConfirmationContext";
 import toast from "react-hot-toast";
+
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -30,7 +33,7 @@ const CountdownRing = ({ seconds, total }) => {
   };
 
   return (
-    <svg width="72" height="72" className="transform -rotate-90">
+    <svg width="72" height="72">
       {/* Background track */}
       <circle
         cx="36"
@@ -51,18 +54,19 @@ const CountdownRing = ({ seconds, total }) => {
         strokeDasharray={circumference}
         strokeDashoffset={dashOffset}
         strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 1s linear, stroke 0.5s ease" }}
+        style={{
+          transform: "rotate(-90deg)",
+          transformOrigin: "36px 36px",
+          transition: "stroke-dashoffset 1s linear, stroke 0.5s ease"
+        }}
       />
-      {/* Center text — rotate back to normal */}
+      {/* Center text */}
       <text
         x="36"
         y="36"
         textAnchor="middle"
         dominantBaseline="central"
-        className="transform rotate-90"
         style={{
-          transform: "rotate(90deg)",
-          transformOrigin: "36px 36px",
           fontSize: "14px",
           fontWeight: "700",
           fill: getColor(),
@@ -78,33 +82,48 @@ const VerifyEmail = () => {
   const { user } = useAuth();
   const verifyEmail = useVerifyEmail();
   const resendVerification = useResendVerification();
+  const cancelSignup = useCancelSignup();
+  const confirm = useConfirm();
   const [token, setToken] = useState("");
   // Start cooldown immediately since email was sent during signup
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS);
   const [emailSentBanner, setEmailSentBanner] = useState(true);
-  const intervalRef = useRef(null);
 
   // Countdown ticker
   useEffect(() => {
-    if (cooldown > 0) {
-      intervalRef.current = setInterval(() => {
-        setCooldown((prev) => {
-          if (prev <= 1) {
-            clearInterval(intervalRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(intervalRef.current);
-  }, [cooldown]);
+    if (cooldown <= 0) return;
+
+    const interval = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [cooldown === 0]);
 
   // Auto-hide the "email sent" banner after 6 seconds
   useEffect(() => {
     const t = setTimeout(() => setEmailSentBanner(false), 6000);
     return () => clearTimeout(t);
   }, []);
+
+  const handleCancelSignup = async () => {
+    const isConfirmed = await confirm({
+      title: "Cancel Registration?",
+      message: "Are you sure you want to cancel your registration? This will clear your temporary signup info and email from the system.",
+      confirmLabel: "Yes, Cancel",
+      cancelLabel: "No, Keep",
+      type: "danger"
+    });
+
+    if (isConfirmed) {
+      cancelSignup.mutate();
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -259,6 +278,25 @@ const VerifyEmail = () => {
                 />
               </button>
             )}
+          </div>
+
+          {/* Cancel Section */}
+          <div className="mt-6 pt-4 border-t border-gray-100 w-full flex justify-center">
+            <button
+              type="button"
+              onClick={handleCancelSignup}
+              disabled={cancelSignup.isPending}
+              className="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1 disabled:opacity-50 animate-pulse-subtle"
+            >
+              {cancelSignup.isPending ? (
+                <>
+                  <FiRefreshCw className="animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                "Cancel Registration & Return"
+              )}
+            </button>
           </div>
         </div>
 

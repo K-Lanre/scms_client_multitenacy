@@ -136,6 +136,25 @@ export const useResendVerification = () => {
     });
 };
 
+export const useCancelSignup = () => {
+    const queryClient = useQueryClient();
+    const navigate = useNavigate();
+
+    return useMutation({
+        mutationFn: authApi.cancelSignup,
+        onSuccess: () => {
+            localStorage.removeItem("token");
+            queryClient.setQueryData(["user"], null);
+            queryClient.clear();
+            toast.success("Registration cancelled successfully.");
+            navigate("/", { replace: true });
+        },
+        onError: (err) => {
+            toast.error(err.response?.data?.message || "Failed to cancel registration.");
+        }
+    });
+};
+
 export const useUpdateProfile = () => {
     const queryClient = useQueryClient();
 
